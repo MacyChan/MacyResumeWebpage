@@ -1,0 +1,5 @@
+.*
+!.gitignore
+springboot/src/main/resources
+springboot/src/test
+springboot/mvnw*
