@@ -22,6 +22,12 @@ public class MusicAndMoodAPIController {
         return musicAndMoodService.getSpotifyUserInfo(currentCode);
     }
 
+    @RequestMapping(value = "/getMusicAndMoodPlaylist", method = RequestMethod.GET)
+    public String getMusicAndMoodPlaylist(@RequestParam(value = "code", required = true) String currentCode ) {
+
+        return spotifyCreatePlaylistService.getMusicAndMoodPlaylistId(currentCode);
+    }
+
     @RequestMapping(value = "/getSubmitPlaylist", method = RequestMethod.GET)
     public String postSubmitPlaylist(@RequestParam(value = "code", required = true) String currentCode,
                                      @RequestParam(value = "playlistId", required = true) String playlistId

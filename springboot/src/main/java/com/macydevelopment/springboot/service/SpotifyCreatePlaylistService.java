@@ -9,13 +9,19 @@ import com.wrapper.spotify.model_objects.specification.Playlist;
 import com.wrapper.spotify.model_objects.specification.PlaylistTrack;
 import com.wrapper.spotify.requests.data.playlists.AddItemsToPlaylistRequest;
 import com.wrapper.spotify.requests.data.playlists.CreatePlaylistRequest;
+import com.wrapper.spotify.requests.data.playlists.GetListOfCurrentUsersPlaylistsRequest;
 import com.wrapper.spotify.requests.data.playlists.GetPlaylistRequest;
+import com.wrapper.spotify.requests.data.playlists.RemoveItemsFromPlaylistRequest;
 import com.wrapper.spotify.requests.data.tracks.GetAudioFeaturesForTrackRequest;
+import com.wrapper.spotify.model_objects.specification.Paging;
+import com.wrapper.spotify.model_objects.specification.PlaylistSimplified;
 import com.macydevelopment.springboot.util.ApiInvalidRequestException;
 import com.wrapper.spotify.exceptions.SpotifyWebApiException;
 import org.apache.hc.core5.http.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,12 +38,13 @@ public class SpotifyCreatePlaylistService {
     MusicAndMoodService musicAndMoodService;
 
     public String generateCustomPlaylist(String currentCode, String playlistId) {
-        Playlist customPlaylist;
+        // Playlist customPlaylist;
+        String customPlaylistId = "";//getMusicAndMoodPlaylistId(currentCode);
         int playlistLimit = 10;
         int customPlaylistLimit = 3;
 
         try {
-            //string weather = "sunny";
+            // string weather = "sunny";
             String accessToken = spotifyAccessTokenService.getAccessToken(currentCode);
             SpotifyUser spotifyUser = musicAndMoodService.getCurrentUserProfile(accessToken);
             PlaylistTrack[] selectedPlaylist = querySelectedPlaylist(accessToken, playlistId);
@@ -46,18 +53,16 @@ public class SpotifyCreatePlaylistService {
             List<AudioFeatures> audioFeatures = new ArrayList<AudioFeatures>();
             AudioFeatures[] arrAudioFeatures = new AudioFeatures[playlistLimit];
             String[] customTrack = new String[customPlaylistLimit];
-            
-            
 
             for (int i = 0; i < playlistLimit && i < selectedPlaylist.length; i++) {
                 Map<String, Object> map = oMapper.convertValue(selectedPlaylist[i].getTrack(), Map.class);
-                //track[i] = "spotify:track:" + map.get("id").toString();
+                // track[i] = "spotify:track:" + map.get("id").toString();
                 track[i] = map.get("id").toString();
-                //audioFeatures[i] = getTrackAnalysis(accessToken, track[i]);
+                // audioFeatures[i] = getTrackAnalysis(accessToken, track[i]);
                 audioFeatures.add(getTrackAnalysis(accessToken, track[i]));
             }
             audioFeatures.stream()
-            .sorted((Loudness1, Loudness2) -> Loudness1.getLoudness().compareTo(Loudness2.getLoudness()));
+                    .sorted((Loudness1, Loudness2) -> Loudness1.getLoudness().compareTo(Loudness2.getLoudness()));
             audioFeatures.stream().limit(customPlaylistLimit);
 
             audioFeatures.toArray(arrAudioFeatures);
@@ -66,17 +71,27 @@ public class SpotifyCreatePlaylistService {
                 customTrack[i] = "spotify:track:" + arrAudioFeatures[i].getId();
             }
 
+            customPlaylistId = createNewPlaylist(accessToken, spotifyUser);
 
-            customPlaylist = createNewPlaylist(accessToken, spotifyUser);
-
-            addTracksToPlaylist(accessToken, customPlaylist.getId(), customTrack);
+/*
+            if (customPlaylistId.isEmpty()) {
+                customPlaylistId = createNewPlaylist(accessToken, spotifyUser);
+            } else {
+                PlaylistTrack[] musicAndMoodTracks = querySelectedPlaylist(accessToken, customPlaylistId);
+                for (int i = 0; i < musicAndMoodTracks.length; i++) {
+                    Map<String, Object> map = oMapper.convertValue(musicAndMoodTracks[i].getTrack(), Map.class);
+                    removeTracks(accessToken, customPlaylistId, map.get("id").toString());
+                }
+            }
+*/
+            addTracksToPlaylist(accessToken, customPlaylistId, customTrack);
 
         } catch (Exception e /* IOException | SpotifyWebApiException | ParseException e */) {
             System.out.println("Error: " + e.getMessage());
             throw new ApiInvalidRequestException("generateCustomPlaylist Error:" + e.getMessage());
         }
 
-        return customPlaylist.getId();
+        return customPlaylistId;
     }
 
     public PlaylistTrack[] querySelectedPlaylist(String accessToken, String playlistId) {
@@ -124,7 +139,7 @@ public class SpotifyCreatePlaylistService {
         }
     }
 
-    public Playlist createNewPlaylist(String accessToken, SpotifyUser spotifyUser) {
+    public String createNewPlaylist(String accessToken, SpotifyUser spotifyUser) {
 
         Playlist playlist;
 
@@ -148,7 +163,7 @@ public class SpotifyCreatePlaylistService {
             throw new ApiInvalidRequestException("createNewPlaylist Error:" + e.getMessage());
         }
 
-        return playlist;
+        return playlist.getId();
     }
 
     public void addTracksToPlaylist(String accessToken, String playlistId, String[] uris) {
@@ -167,6 +182,67 @@ public class SpotifyCreatePlaylistService {
             System.out.println("Error: " + e.getMessage());
             throw new ApiInvalidRequestException("addTracksToPlaylist Error:" + e.getMessage());
         }
+    }
+
+    public String getMusicAndMoodPlaylistId(String currentCode) {
+
+        String musicAndMoodPlaylistId = "";
+
+        try {
+
+            String accessToken = spotifyAccessTokenService.getAccessToken(currentCode);
+            SpotifyApi spotifyApi = spotifyAccessTokenService.setAccessToken(accessToken);
+
+            GetListOfCurrentUsersPlaylistsRequest getListOfCurrentUsersPlaylistsRequest = spotifyApi
+                    .getListOfCurrentUsersPlaylists()
+                    // .limit(10)
+                    // .offset(0)
+                    .build();
+
+            Paging<PlaylistSimplified> playlistSimplifiedPaging = getListOfCurrentUsersPlaylistsRequest.execute();
+
+            PlaylistSimplified[] playlistSimplifieds = playlistSimplifiedPaging.getItems().clone();
+
+            for (int i = 0; i < playlistSimplifieds.length; i++) {
+                if (playlistSimplifieds[i].getName().equals("Music and Mood Playlist")) {
+                    musicAndMoodPlaylistId = playlistSimplifieds[0].getId();
+                    break;
+                }
+                ;
+            }
+
+            // System.out.println("Total: " + playlistSimplifiedPaging.getTotal());
+
+        } catch (IOException | SpotifyWebApiException | ParseException e) {
+            System.out.println("Error: " + e.getMessage());
+            throw new ApiInvalidRequestException("getMusicAndMoodPlaylistId Error:" + e.getMessage());
+        }
+
+        return musicAndMoodPlaylistId;
+    }
+
+    public void removeTracks(String accessToken, String playlistId, String strTracks) {
+
+        try {
+
+            SpotifyApi spotifyApi = spotifyAccessTokenService.setAccessToken(accessToken);
+            JsonArray tracks = JsonParser.parseString("[{\"uri\":\"spotify:track:" + strTracks +"\"}]").getAsJsonArray();
+
+            RemoveItemsFromPlaylistRequest removeItemsFromPlaylistRequest = spotifyApi
+            .removeItemsFromPlaylist(playlistId, tracks)
+            //.snapshotId("JbtmHBDBAYu3/bt8BOXKjzKx3i0b6LCa/wVjyl6qQ2Yf6nFXkbmzuEa+ZI/U1yF+")
+            .build();
+
+            SnapshotResult snapshotResult = removeItemsFromPlaylistRequest.execute();
+
+            System.out.println("Snapshot ID: " + snapshotResult.getSnapshotId());
+
+        } catch (IOException | SpotifyWebApiException | ParseException e) {
+            System.out.println("Error: " + e.getMessage());
+            throw new ApiInvalidRequestException("removeTracks Error:" + e.getMessage());
+        }
+
+
     }
 
 }

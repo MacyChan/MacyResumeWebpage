@@ -1,12 +1,12 @@
 package com.macydevelopment.springboot.config;
 
-
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+//import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+
 
 
 @Configuration
@@ -20,8 +20,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
         http//.antMatcher("/**")
                 .authorizeRequests( a ->
-                                    a.antMatchers("/", "/index**","/test**", "/login**", "/get**", "/callback/", "/webjars/**", "/error**", "/oauth2/authorization/**")
+                                    a.antMatchers("/", "/index**", "/test**", "/login**", "/get**", "/callback/", "/webjars/**", "/error**", "/oauth2/authorization/**", "/api/**")
                                     .permitAll()
+
+
                 //.antMatchers("/MusicAndMood**")
                 //.permitAll()
                                     .anyRequest()
@@ -34,10 +36,11 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                                 )
                         )
                 )*/
-                       .and()
-                .csrf(c -> c
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                )
+                .and()
+                //.csrf(c -> c
+                //        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrf().disable()
+                //)
                 .formLogin().disable()
                 .logout().logoutSuccessUrl("/index.html").permitAll();
     }
@@ -49,7 +52,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .ignoring()
                 .antMatchers("/resources/**", "/static/**", "/css/**", "/js/**", "/images/**", "/fonts/**", "/scss/**","/vendor/**");
     }
-
 
 }
 
