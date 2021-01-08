@@ -7,6 +7,11 @@ import javax.validation.constraints.Size;
 @Entity
 @Table(name = "main_contact_me")
 public class ContactMeModel extends AuditModel {
+    /**
+     *
+     */
+    private static final long serialVersionUID = 1L;
+
     @Id
     @GeneratedValue(generator = "contactMe_generator")
     @SequenceGenerator(

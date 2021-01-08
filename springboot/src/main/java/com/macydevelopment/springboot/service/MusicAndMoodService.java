@@ -6,18 +6,14 @@ import java.util.Collections;
 import java.util.List;
 
 import com.macydevelopment.springboot.model.IPWeatherInfo;
-import com.macydevelopment.springboot.model.SpotifyUser;
+import com.macydevelopment.springboot.model.SpotifyUserModel;
+import com.macydevelopment.springboot.repository.SpotifyUserRepository;
 import com.macydevelopment.springboot.util.ApiInvalidRequestException;
 import com.macydevelopment.springboot.util.RequestResponseLoggingInterceptor;
 import com.macydevelopment.springboot.web.UserIPLocationResponse;
 import com.macydevelopment.springboot.web.UserIPWeatherResponse;
 import com.macydevelopment.springboot.web.dataseries;
 
-/*
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.client.RestTemplateBuilder; */
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -44,48 +40,45 @@ public class MusicAndMoodService {
     @Autowired
     SpotifyAccessTokenService spotifyAccessTokenService;
     
-    /*
-     * private RestTemplate restTemplate;
-     * 
-     * @Autowired public MusicAndMoodService(RestTemplateBuilder builder) {
-     * this.restTemplate = builder.build(); }
-     */
-    // private final Logger log = LoggerFactory.getLogger(this.getClass());
+    @Autowired
+    private SpotifyUserRepository spotifyUserRepository;
 
-    public SpotifyUser getSpotifyUserInfo(String currentCode) {
+    public SpotifyUserModel getSpotifyUserInfo(String currentCode) {
 
-        SpotifyUser spotifyUser = new SpotifyUser();
+        SpotifyUserModel spotifyUserModel = new SpotifyUserModel();
         
         try {
 
-            spotifyUser = getCurrentUserProfile(spotifyAccessTokenService.getAccessToken(currentCode));
+            spotifyUserModel = getCurrentUserProfile(spotifyAccessTokenService.getAccessToken(currentCode));
 
             UserIPLocationResponse userIPLocationResponse = getIpLocation();
 
-            spotifyUser.location = userIPLocationResponse.getCountryName();
-            spotifyUser.latitude = userIPLocationResponse.getLatitude();
-            spotifyUser.longitude = userIPLocationResponse.getLongitude();
+            spotifyUserModel.setLocation(userIPLocationResponse.getCountryName());
+            spotifyUserModel.setLatitude(userIPLocationResponse.getLatitude());
+            spotifyUserModel.setLongitude(userIPLocationResponse.getLongitude());
 
-            IPWeatherInfo ipWeatherInfo = getIpWeather(spotifyUser.latitude, spotifyUser.longitude);
+            IPWeatherInfo ipWeatherInfo = getIpWeather(spotifyUserModel.getLatitude(), spotifyUserModel.getLongitude());
 
-            spotifyUser.weather = ipWeatherInfo.weather;
-            spotifyUser.tempMax = ipWeatherInfo.tempMax;
-            spotifyUser.tempMin = ipWeatherInfo.tempMin;
-            spotifyUser.moodLevel = "20";
+            spotifyUserModel.setWeather(ipWeatherInfo.weather);
+            spotifyUserModel.setTempMax(ipWeatherInfo.tempMax);
+            spotifyUserModel.setTempMin(ipWeatherInfo.tempMin);
+            spotifyUserModel.setMoodLevel("20");
+            spotifyUserModel.setAuthCode(currentCode);
+            spotifyUserRepository.save(spotifyUserModel);
 
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
             throw new ApiInvalidRequestException("getSpotifyUserInfo Error:" + e.getMessage());
         }
 
-        return spotifyUser;
+        return spotifyUserModel;
     }
 
 
 
-    public SpotifyUser getCurrentUserProfile(String accessToken){
+    public SpotifyUserModel getCurrentUserProfile(String accessToken){
 
-        SpotifyUser spotifyUser = new SpotifyUser();
+        SpotifyUserModel spotifyUserModel = new SpotifyUserModel();
 
         try {
 
@@ -96,10 +89,9 @@ public class MusicAndMoodService {
 
             User user = getCurrentUsersProfileRequest.execute();
 
-            spotifyUser.id = user.getId();
-            spotifyUser.displayName = user.getDisplayName();
-            spotifyUser.birthdate = user.getBirthdate();
-            spotifyUser.country = user.getCountry().toString();
+            spotifyUserModel.setSpotifyUserId(user.getId());
+            spotifyUserModel.setDisplayName(user.getDisplayName());
+            spotifyUserModel.setCountry(user.getCountry().toString());
 
             System.out.println("Display name: " + user.getDisplayName());
         } catch (Exception e) {
@@ -107,7 +99,7 @@ public class MusicAndMoodService {
             throw new ApiInvalidRequestException("getCurrentUserProfile Error:" + e.getMessage());
         }
 
-        return spotifyUser;
+        return spotifyUserModel;
 
     }
 
@@ -173,6 +165,4 @@ public class MusicAndMoodService {
         return ipWeatherInfo;
     }
 
-
-    
 }
