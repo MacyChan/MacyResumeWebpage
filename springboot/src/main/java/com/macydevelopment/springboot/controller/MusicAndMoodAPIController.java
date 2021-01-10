@@ -3,6 +3,7 @@ package com.macydevelopment.springboot.controller;
 import com.macydevelopment.springboot.service.MusicAndMoodService;
 import com.macydevelopment.springboot.service.SpotifyCreatePlaylistService;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
 import com.macydevelopment.springboot.exception.ResourceNotFoundException;
@@ -27,14 +28,22 @@ public class MusicAndMoodAPIController {
     @Autowired
     private AudioFeaturesRepository audioFeaturesRepository;
 
-    @RequestMapping(value = "/getSpotifyUserInfo", method = RequestMethod.GET)
-    public SpotifyUserModel getSpotifyUserInfo(@RequestParam(value = "code", required = true) String currentCode ) {
+    @RequestMapping(value = "/getClientIp", method = RequestMethod.GET)
+    public @ResponseBody String processData(HttpServletRequest request) {
+            String clientIp = request.getRemoteAddr();
+            System.out.println("ClientIp is " + clientIp);
+            return clientIp;
+    }
 
-        return musicAndMoodService.getSpotifyUserInfo(currentCode);
+    @RequestMapping(value = "/getSpotifyUserInfo", method = RequestMethod.GET)
+    public SpotifyUserModel getSpotifyUserInfo(@RequestParam(value = "code", required = true) String currentCode,
+                                    @RequestParam(value = "clientIp", required = true) String clientIp ) {
+
+        return musicAndMoodService.getSpotifyUserInfo(currentCode, clientIp);
     }
 
     @RequestMapping(value = "/getMusicAndMoodPlaylist", method = RequestMethod.GET)
-    public String getMusicAndMoodPlaylist(@RequestParam(value = "code", required = true) String currentCode ) {
+    public String getMusicAndMoodPlaylist(@RequestParam(value = "code", required = true) String currentCode) {
 
         return spotifyCreatePlaylistService.getMusicAndMoodPlaylistId(currentCode);
     }
@@ -68,6 +77,5 @@ public class MusicAndMoodAPIController {
                     return audioFeaturesRepository.save(audioFeatures);
                 }).orElseThrow(() -> new ResourceNotFoundException("Audio not found with id " + audioFeatureId));
     }
-
 
 }

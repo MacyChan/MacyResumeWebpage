@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.lang.Math; 
 
 import com.macydevelopment.springboot.model.IPWeatherInfo;
 import com.macydevelopment.springboot.model.SpotifyUserModel;
@@ -39,19 +40,19 @@ public class MusicAndMoodService {
 
     @Autowired
     SpotifyAccessTokenService spotifyAccessTokenService;
-    
+
     @Autowired
     private SpotifyUserRepository spotifyUserRepository;
 
-    public SpotifyUserModel getSpotifyUserInfo(String currentCode) {
+    public SpotifyUserModel getSpotifyUserInfo(String currentCode, String clientIp) {
 
         SpotifyUserModel spotifyUserModel = new SpotifyUserModel();
-        
+
         try {
 
             spotifyUserModel = getCurrentUserProfile(spotifyAccessTokenService.getAccessToken(currentCode));
 
-            UserIPLocationResponse userIPLocationResponse = getIpLocation();
+            UserIPLocationResponse userIPLocationResponse = getIpLocation(clientIp);
 
             spotifyUserModel.setLocation(userIPLocationResponse.getCountryName());
             spotifyUserModel.setLatitude(userIPLocationResponse.getLatitude());
@@ -62,7 +63,7 @@ public class MusicAndMoodService {
             spotifyUserModel.setWeather(ipWeatherInfo.weather);
             spotifyUserModel.setTempMax(ipWeatherInfo.tempMax);
             spotifyUserModel.setTempMin(ipWeatherInfo.tempMin);
-            spotifyUserModel.setMoodLevel("20");
+            spotifyUserModel.setMoodLevel(getMoodLevel(ipWeatherInfo.weather, Integer.parseInt(ipWeatherInfo.tempMax), Integer.parseInt(ipWeatherInfo.tempMin)));
             spotifyUserModel.setAuthCode(currentCode);
             spotifyUserRepository.save(spotifyUserModel);
 
@@ -74,9 +75,7 @@ public class MusicAndMoodService {
         return spotifyUserModel;
     }
 
-
-
-    public SpotifyUserModel getCurrentUserProfile(String accessToken){
+    public SpotifyUserModel getCurrentUserProfile(String accessToken) {
 
         SpotifyUserModel spotifyUserModel = new SpotifyUserModel();
 
@@ -84,8 +83,7 @@ public class MusicAndMoodService {
 
             SpotifyApi spotifyApi = spotifyAccessTokenService.setAccessToken(accessToken);
 
-            GetCurrentUsersProfileRequest getCurrentUsersProfileRequest = spotifyApi.getCurrentUsersProfile()
-                .build();
+            GetCurrentUsersProfileRequest getCurrentUsersProfileRequest = spotifyApi.getCurrentUsersProfile().build();
 
             User user = getCurrentUsersProfileRequest.execute();
 
@@ -103,16 +101,20 @@ public class MusicAndMoodService {
 
     }
 
-    
-    public UserIPLocationResponse getIpLocation() {
+    public UserIPLocationResponse getIpLocation(String clientIp) {
 
-        String urlIpGEO = "https://freegeoip.app/json/";
+        if (clientIp.equals("0:0:0:0:0:0:0:1")) {
+            clientIp = "";
+        }
+        ;
+
+        String urlIpGEO = "https://freegeoip.app/json/" + clientIp;
 
         ClientHttpRequestFactory factory = new BufferingClientHttpRequestFactory(new SimpleClientHttpRequestFactory());
         RestTemplate restTemplate = new RestTemplate(factory);
         restTemplate.setInterceptors(Collections.singletonList(new RequestResponseLoggingInterceptor()));
         HttpHeaders headers = new HttpHeaders();
-        //headers.setContentType(MediaType.APPLICATION_JSON);    
+        // headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
         // header.set("Authorization", "Bearer" + token);
         HttpEntity<String> entity = new HttpEntity<String>(headers);
@@ -142,17 +144,18 @@ public class MusicAndMoodService {
         HttpEntity<String> entity = new HttpEntity<String>(headers);
         entity = restTemplate.getForEntity(urlWeather, String.class, longitude, latitude);
 
-        //Converter for html response
-        List<HttpMessageConverter<?>> messageConverters = new ArrayList<HttpMessageConverter<?>>();        
+        // Converter for html response
+        List<HttpMessageConverter<?>> messageConverters = new ArrayList<HttpMessageConverter<?>>();
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-        converter.setSupportedMediaTypes(Collections.singletonList(MediaType.ALL));        
-        messageConverters.add(converter);  
-        restTemplate.setMessageConverters(messageConverters); 
+        converter.setSupportedMediaTypes(Collections.singletonList(MediaType.ALL));
+        messageConverters.add(converter);
+        restTemplate.setMessageConverters(messageConverters);
 
         ResponseEntity<UserIPWeatherResponse> resp = new ResponseEntity<UserIPWeatherResponse>(HttpStatus.OK);
 
         try {
-            resp = restTemplate.exchange(urlWeather, HttpMethod.GET, entity, UserIPWeatherResponse.class, longitude, latitude );
+            resp = restTemplate.exchange(urlWeather, HttpMethod.GET, entity, UserIPWeatherResponse.class, longitude,
+                    latitude);
             weather = resp.getBody().getDataSeries();
             ipWeatherInfo.weather = weather[0].getWeather();
             ipWeatherInfo.tempMax = weather[0].getTemp2m().get("max").toString();
@@ -165,4 +168,49 @@ public class MusicAndMoodService {
         return ipWeatherInfo;
     }
 
+    public String getMoodLevel(String weather, Integer tempMax, Integer tempMin) {
+
+        Double score = 0.0;
+
+        switch (weather) {
+            case "clear":
+            score = score + 0.9;
+                break;
+            case "mcloudy":
+            score = score + 0.6;
+                break;
+            case "cloudy":
+            score = score + 0.3;
+                break;
+            case "rain":
+            score = score + 0;
+                break;
+            case "snow":
+            score = score - 1;
+                break;
+            case "ts":
+            score = score - 1.5;
+                break;
+            case "tsrain":
+            score = score - 2;
+                break;
+        }
+
+        Integer tempDiff = tempMax - tempMin;
+
+        if (tempDiff > 20){score = score - 1.5;}
+        if (tempDiff > 10 && tempDiff <= 20){score = score - 0.5;}
+        if (tempDiff > 5 && tempDiff <= 10){score = score + 0.2;}
+        if (tempDiff < 5){score = score + 0.5;}
+
+
+        if (tempMax > 30 || tempMin < 10){score = score - 1.5;}
+        if ((tempMax > 20 && tempMax <=28) || (tempMin < 15 && tempMin >= 10)){score = score - 0.5;}
+        if (tempMax < 28 && tempMin >= 20){score = score + 0.7;}
+
+
+        Integer result = (int)(100/(1 + Math.exp(-score)));
+
+        return result.toString();
+    }
 }
