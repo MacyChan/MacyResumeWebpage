@@ -15,11 +15,7 @@ public class AudioFeaturesModel extends AuditModel {
 
     @Id
     @GeneratedValue(generator = "audiofeatures_generator")
-    @SequenceGenerator(
-            name = "audiofeatures_generator",
-            sequenceName = "audiofeatures_sequence",
-            initialValue = 1000
-    )
+    @SequenceGenerator(name = "audiofeatures_generator", sequenceName = "audiofeatures_sequence", initialValue = 1000)
     private Long id;
 
     @Column(columnDefinition = "text")
@@ -82,12 +78,11 @@ public class AudioFeaturesModel extends AuditModel {
     @Column(precision = 1, scale = 0)
     private Integer Score;
 
-
     public Long getId() {
         return this.id;
     }
 
-    public void setAuthCode(Long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -98,7 +93,7 @@ public class AudioFeaturesModel extends AuditModel {
     public void setAuthCode(String authCode) {
         this.authCode = authCode;
     }
-    
+
     public String getSpotifyUserId() {
         return this.spotifyUserId;
     }

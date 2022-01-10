@@ -37,9 +37,12 @@ public class SpotifyCreatePlaylistService {
     @Autowired
     private AudioFeaturesRepository audioFeaturesRepository;
 
+    @Autowired
+    SpotifyQueryArtistService spotifyQueryArtistService;
+
     public AudioFeaturesModel[] generateCustomPlaylist(String currentCode, String playlistId) {
         // Playlist customPlaylist;
-        String customPlaylistId = "";//getMusicAndMoodPlaylistId(currentCode);
+        String customPlaylistId = "";// getMusicAndMoodPlaylistId(currentCode);
         int playlistLimit = 30;
         int customPlaylistLimit = 10;
         AudioFeaturesModel[] arrAudioFeaturesModel = new AudioFeaturesModel[playlistLimit];
@@ -48,12 +51,10 @@ public class SpotifyCreatePlaylistService {
             // string weather = "sunny";
             String[] track = new String[playlistLimit];
             ObjectMapper oMapper = new ObjectMapper();
-            //List<AudioFeatures> audioFeatures = new ArrayList<AudioFeatures>();
+            // List<AudioFeatures> audioFeatures = new ArrayList<AudioFeatures>();
             AudioFeatures[] arrAudioFeatures = new AudioFeatures[playlistLimit];
             String[] customTrack = new String[customPlaylistLimit];
-            
 
-        
             String accessToken = spotifyAccessTokenService.getAccessToken(currentCode);
             SpotifyUserModel spotifyUser = musicAndMoodService.getCurrentUserProfile(accessToken);
             PlaylistTrack[] selectedPlaylist = querySelectedPlaylist(accessToken, playlistId);
@@ -64,8 +65,8 @@ public class SpotifyCreatePlaylistService {
                 Map<String, Object> map = oMapper.convertValue(selectedPlaylist[i].getTrack(), Map.class);
                 // track[i] = "spotify:track:" + map.get("id").toString();
                 track[i] = map.get("id").toString();
-                
-                //audioFeatures.add(getTrackAnalysis(accessToken, track[i]));
+
+                // audioFeatures.add(getTrackAnalysis(accessToken, track[i]));
                 arrAudioFeatures[i] = getTrackAnalysis(accessToken, track[i]);
                 arrAudioFeaturesModel[i] = new AudioFeaturesModel();
                 arrAudioFeaturesModel[i].setAuthCode(currentCode);
@@ -89,31 +90,34 @@ public class SpotifyCreatePlaylistService {
                 arrAudioFeaturesModel[i].setValence(arrAudioFeatures[i].getValence());
                 audioFeaturesRepository.save(arrAudioFeaturesModel[i]);
             }
-            
-            //Logic on db.save & output (get Id -> customTrack[i])
-            /*
-            audioFeatures.stream()
-                    .sorted((Loudness1, Loudness2) -> Loudness1.getLoudness().compareTo(Loudness2.getLoudness()));
-            audioFeatures.stream().limit(customPlaylistLimit);
 
-            audioFeatures.toArray(arrAudioFeatures);
-            */
-            
-            for (int i = 0; i < customPlaylistLimit /* && i < audioFeatures.size()*/; i++) {
+            // Logic on db.save & output (get Id -> customTrack[i])
+            /*
+             * audioFeatures.stream()
+             * .sorted((Loudness1, Loudness2) ->
+             * Loudness1.getLoudness().compareTo(Loudness2.getLoudness()));
+             * audioFeatures.stream().limit(customPlaylistLimit);
+             * 
+             * audioFeatures.toArray(arrAudioFeatures);
+             */
+
+            for (int i = 0; i < customPlaylistLimit /* && i < audioFeatures.size() */; i++) {
                 customTrack[i] = "spotify:track:" + arrAudioFeatures[i].getId();
             }
 
-/*
-            if (customPlaylistId.isEmpty()) {
-                customPlaylistId = createNewPlaylist(accessToken, spotifyUser);
-            } else {
-                PlaylistTrack[] musicAndMoodTracks = querySelectedPlaylist(accessToken, customPlaylistId);
-                for (int i = 0; i < musicAndMoodTracks.length; i++) {
-                    Map<String, Object> map = oMapper.convertValue(musicAndMoodTracks[i].getTrack(), Map.class);
-                    removeTracks(accessToken, customPlaylistId, map.get("id").toString());
-                }
-            }
-*/
+            /*
+             * if (customPlaylistId.isEmpty()) {
+             * customPlaylistId = createNewPlaylist(accessToken, spotifyUser);
+             * } else {
+             * PlaylistTrack[] musicAndMoodTracks = querySelectedPlaylist(accessToken,
+             * customPlaylistId);
+             * for (int i = 0; i < musicAndMoodTracks.length; i++) {
+             * Map<String, Object> map =
+             * oMapper.convertValue(musicAndMoodTracks[i].getTrack(), Map.class);
+             * removeTracks(accessToken, customPlaylistId, map.get("id").toString());
+             * }
+             * }
+             */
             addTracksToPlaylist(accessToken, customPlaylistId, customTrack);
 
         } catch (Exception e /* IOException | SpotifyWebApiException | ParseException e */) {
@@ -161,6 +165,8 @@ public class SpotifyCreatePlaylistService {
 
             System.out.println("ID: " + audioFeatures.getId());
 
+            spotifyQueryArtistService.getArtistInfo(accessToken, id);
+
             return audioFeatures;
 
         } catch (IOException | SpotifyWebApiException | ParseException e) {
@@ -177,7 +183,8 @@ public class SpotifyCreatePlaylistService {
 
             SpotifyApi spotifyApi = spotifyAccessTokenService.setAccessToken(accessToken);
             String nameOfPlaylist = "Music and Mood Playlist";
-            CreatePlaylistRequest createPlaylistRequest = spotifyApi.createPlaylist(spotifyUser.getSpotifyUserId(), nameOfPlaylist)
+            CreatePlaylistRequest createPlaylistRequest = spotifyApi
+                    .createPlaylist(spotifyUser.getSpotifyUserId(), nameOfPlaylist)
                     // .collaborative(false)
                     // .public_(false)
                     .description(
@@ -251,28 +258,32 @@ public class SpotifyCreatePlaylistService {
         return musicAndMoodPlaylistId;
     }
     /*
-    public void removeTracks(String accessToken, String playlistId, String strTracks) {
-
-        try {
-
-            SpotifyApi spotifyApi = spotifyAccessTokenService.setAccessToken(accessToken);
-            JsonArray tracks = JsonParser.parseString("[{\"uri\":\"spotify:track:" + strTracks +"\"}]").getAsJsonArray();
-
-            RemoveItemsFromPlaylistRequest removeItemsFromPlaylistRequest = spotifyApi
-            .removeItemsFromPlaylist(playlistId, tracks)
-            //.snapshotId("JbtmHBDBAYu3/bt8BOXKjzKx3i0b6LCa/wVjyl6qQ2Yf6nFXkbmzuEa+ZI/U1yF+")
-            .build();
-
-            SnapshotResult snapshotResult = removeItemsFromPlaylistRequest.execute();
-
-            System.out.println("Snapshot ID: " + snapshotResult.getSnapshotId());
-
-        } catch (IOException | SpotifyWebApiException | ParseException e) {
-            System.out.println("Error: " + e.getMessage());
-            throw new ApiInvalidRequestException("removeTracks Error:" + e.getMessage());
-        }
-
-
-    }
-*/
+     * public void removeTracks(String accessToken, String playlistId, String
+     * strTracks) {
+     * 
+     * try {
+     * 
+     * SpotifyApi spotifyApi =
+     * spotifyAccessTokenService.setAccessToken(accessToken);
+     * JsonArray tracks = JsonParser.parseString("[{\"uri\":\"spotify:track:" +
+     * strTracks +"\"}]").getAsJsonArray();
+     * 
+     * RemoveItemsFromPlaylistRequest removeItemsFromPlaylistRequest = spotifyApi
+     * .removeItemsFromPlaylist(playlistId, tracks)
+     * //.snapshotId(
+     * "JbtmHBDBAYu3/bt8BOXKjzKx3i0b6LCa/wVjyl6qQ2Yf6nFXkbmzuEa+ZI/U1yF+")
+     * .build();
+     * 
+     * SnapshotResult snapshotResult = removeItemsFromPlaylistRequest.execute();
+     * 
+     * System.out.println("Snapshot ID: " + snapshotResult.getSnapshotId());
+     * 
+     * } catch (IOException | SpotifyWebApiException | ParseException e) {
+     * System.out.println("Error: " + e.getMessage());
+     * throw new ApiInvalidRequestException("removeTracks Error:" + e.getMessage());
+     * }
+     * 
+     * 
+     * }
+     */
 }
