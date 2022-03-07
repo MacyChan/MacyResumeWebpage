@@ -42,7 +42,7 @@ public class SpotifyAccessTokenService {
         try {
 
             SpotifyApi spotifyApi = setAuthSpotifyApi();
-            
+
             AuthorizationCodeUriRequest authorizationCodeUriRequest = spotifyApi.authorizationCodeUri()
                     // .state("x4xkmn9pu3j6ukrs8n")
                     .scope(spotifyPropertiesConfig.getScope())
@@ -186,10 +186,11 @@ public class SpotifyAccessTokenService {
                 .getRefreshToken();
     }
 
+    private void addTokenRecordToGlobalList(String currentCode, String accessToken, String refreshToken,
+            Integer expiresIn, String scope) {
 
-    private void addTokenRecordToGlobalList(String currentCode, String accessToken, String refreshToken, Integer expiresIn, String scope) {
-
-        startUpService.listAccessTokenRecords.removeIf(accessTokenRecord -> accessTokenRecord.getCode().equals(currentCode));
+        startUpService.listAccessTokenRecords
+                .removeIf(accessTokenRecord -> accessTokenRecord.getCode().equals(currentCode));
 
         AccessTokenRecord accessTokenRecords = new AccessTokenRecord();
 
@@ -201,7 +202,8 @@ public class SpotifyAccessTokenService {
         accessTokenRecords.setScope(scope);
 
         startUpService.listAccessTokenRecords.add(accessTokenRecords);
-        startUpService.listAccessTokenRecords.removeIf(accessTokenRecord -> accessTokenRecord.getExpireTime().isBefore(now().minusDays(1)));
+        startUpService.listAccessTokenRecords
+                .removeIf(accessTokenRecord -> accessTokenRecord.getExpireTime().isBefore(now().minusDays(1)));
 
     }
 
@@ -211,8 +213,8 @@ public class SpotifyAccessTokenService {
                 .build();
     }
 
-    public List<AccessTokenRecord> getListAccessTokenRecords(){
+    public List<AccessTokenRecord> getListAccessTokenRecords() {
         return startUpService.listAccessTokenRecords;
-    } 
+    }
 
 }

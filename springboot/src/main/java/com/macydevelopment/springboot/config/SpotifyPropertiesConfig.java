@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import javax.validation.constraints.NotBlank;
 
 @ConfigurationProperties(prefix = "spotify")
-//@Data
+// @Data
 
 public class SpotifyPropertiesConfig {
 
@@ -22,7 +22,6 @@ public class SpotifyPropertiesConfig {
 
   @NotBlank
   private String Scope;
-
 
   public void setClientId(String ClientId) {
     this.ClientId = ClientId;

@@ -1,8 +1,14 @@
 package com.macydevelopment.springboot.model;
 
 import javax.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
 @Table(name = "mm_artistInfo")
 public class ArtistModel extends AuditModel {
     /**
@@ -26,45 +32,45 @@ public class ArtistModel extends AuditModel {
 
     @Column(columnDefinition = "integer")
     private Integer popularity;
-
-    public Long getId() {
-        return this.id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getArtistId() {
-        return this.artistId;
-    }
-
-    public void setArtistId(String artistId) {
-        this.artistId = artistId;
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getGenres() {
-        return this.genres;
-    }
-
-    public void setGenres(String strings) {
-        this.genres = strings;
-    }
-
-    public Integer getPopularity() {
-        return this.popularity;
-    }
-
-    public void setPopularity(Integer integer) {
-        this.popularity = integer;
-    }
-
+    /*
+     * public Long getId() {
+     * return this.id;
+     * }
+     * 
+     * public void setId(Long id) {
+     * this.id = id;
+     * }
+     * 
+     * public String getArtistId() {
+     * return this.artistId;
+     * }
+     * 
+     * public void setArtistId(String artistId) {
+     * this.artistId = artistId;
+     * }
+     * 
+     * public String getName() {
+     * return this.name;
+     * }
+     * 
+     * public void setName(String name) {
+     * this.name = name;
+     * }
+     * 
+     * public String getGenres() {
+     * return this.genres;
+     * }
+     * 
+     * public void setGenres(String strings) {
+     * this.genres = strings;
+     * }
+     * 
+     * public Integer getPopularity() {
+     * return this.popularity;
+     * }
+     * 
+     * public void setPopularity(Integer integer) {
+     * this.popularity = integer;
+     * }
+     */
 }
